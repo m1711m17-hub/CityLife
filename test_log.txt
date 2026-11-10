@@ -1,0 +1,69 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+PASS: world built (ready_done)
+PASS: city has ground + 25 blocks (31 children)
+PASS: at least 2 interactable doors
+PASS: player, camera rig and UI exist
+PASS: player stands on floor
+PASS: player height sane (-0.00)
+PASS: stick moves player (3.75 m in 1.5s)
+PASS: player moved toward camera forward (+Z)
+PASS: running faster than walking (walk 2.54, run 5.66)
+PASS: jump raises player (1.16 m)
+PASS: player lands after jump
+PASS: starts in third person
+PASS: switches to first person
+PASS: first-person camera at eye position
+PASS: switches back to third person
+PASS: third-person camera behind player
+PASS: look drag rotates camera yaw
+PASS: door detected near player
+PASS: USE opens the door
+PASS: player walks through open door
+PASS: wall blocks the player (z -169.32 < door z -168.85)
+PASS: player climbs the curb (z -159.41)
+PASS: UI JUMP button makes player jump
+PASS: UI CAM button switches camera
+PASS: run starts off
+PASS: UI RUN button toggles run on
+PASS: UI RUN button toggles run off
+PASS: UI GFX button cycles quality
+PASS: on-screen stick moves player
+PASS: stick releases to zero
+
+RESULT: 30 checks, 0 failed
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+ERROR: Parameter "m" is null.
+   at: mesh_get_surface_count (servers/rendering/dummy/storage/mesh_storage.h:120)
+exit code: 0
