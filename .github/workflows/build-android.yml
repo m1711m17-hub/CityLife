@@ -1,0 +1,136 @@
+name: Build Android APK (Godot)
+
+# شغّله يدوياً: Actions -> Build Android APK (Godot) -> Run workflow
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # يدعم رفع المشروع كملف ZIP واحد (مناسب للهاتف) أو كمجلدات عادية
+      - name: Locate project
+        run: |
+          for z in *.zip; do
+            [ -f "$z" ] && unzip -q -o "$z" -d _unzipped && echo "unzipped $z"
+          done
+          P=$(find . -name project.godot -not -path "*/.godot/*" | head -n 1)
+          if [ -z "$P" ]; then echo "project.godot not found"; exit 1; fi
+          echo "PROJECT_DIR=$(cd "$(dirname "$P")" && pwd)" >> "$GITHUB_ENV"
+          echo "Project at: $(dirname "$P")"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Godot and export templates
+        run: |
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          curl -fsSL -o templates.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q templates.tpz -d tpl
+          mv tpl/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+          godot --version
+
+      - name: Android SDK
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "build-tools;34.0.0" "platforms;android-34" "cmdline-tools;latest"
+          echo "ANDROID_SDK_PATH=$SDK" >> "$GITHUB_ENV"
+
+      - name: Debug keystore and editor settings
+        run: |
+          keytool -genkeypair -v -keystore "$HOME/debug.keystore" -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p "$HOME/.config/godot"
+          for f in editor_settings-4.tres editor_settings-4.3.tres; do
+          cat > "$HOME/.config/godot/$f" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_PATH"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          done
+          cd "$PROJECT_DIR"
+          sed -i "s|^keystore/debug=.*|keystore/debug=\"$HOME/debug.keystore\"|" export_presets.cfg
+          sed -i "s|^keystore/debug_user=.*|keystore/debug_user=\"androiddebugkey\"|" export_presets.cfg
+          sed -i "s|^keystore/debug_password=.*|keystore/debug_password=\"android\"|" export_presets.cfg
+
+      - name: Import project
+        run: |
+          cd "$PROJECT_DIR"
+          godot --headless --path . --import 2>&1 | tail -n 40 || true
+
+      # الاختبارات لا توقف البناء: نريد الـ APK دائماً مع تقرير واضح
+      - name: Run automated tests
+        run: |
+          cd "$PROJECT_DIR"
+          set +e
+          timeout 420 godot --headless --path . res://tests/test_runner.tscn > "$GITHUB_WORKSPACE/test_log.txt" 2>&1
+          echo "exit code: $?" | tee -a "$GITHUB_WORKSPACE/test_log.txt"
+          {
+            echo "## Test results"
+            echo '```'
+            grep -E "^(PASS|FAIL|RESULT)" "$GITHUB_WORKSPACE/test_log.txt" || echo "no test output (see test_log.txt artifact)"
+            echo '```'
+            echo "## Script errors"
+            echo '```'
+            grep -E "SCRIPT ERROR|Parse Error|ERROR:" "$GITHUB_WORKSPACE/test_log.txt" | head -n 40 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Export APK
+        run: |
+          cd "$PROJECT_DIR"
+          mkdir -p build/android
+          godot --headless --path . --export-debug "Android" build/android/CityLife.apk 2>&1 | tee "$GITHUB_WORKSPACE/export_log.txt"
+          ls -la build/android
+          test -s build/android/CityLife.apk
+          cp build/android/CityLife.apk "$GITHUB_WORKSPACE/CityLife.apk"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CityLife-apk-and-logs
+          path: |
+            CityLife.apk
+            test_log.txt
+            export_log.txt
+          if-no-files-found: ignore
+
+      # ينشر الـ APK والسجلات في فرع apk (بدل تضخيم main)
+      - name: Publish results to apk branch
+        if: always()
+        run: |
+          mkdir -p /tmp/pub
+          cp CityLife.apk test_log.txt export_log.txt /tmp/pub/ 2>/dev/null || true
+          cd /tmp/pub
+          git init -q -b apk
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -qm "Build results for ${GITHUB_SHA}" || exit 0
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" apk
